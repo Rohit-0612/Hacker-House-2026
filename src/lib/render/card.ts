@@ -78,7 +78,11 @@ function ringedPhoto(photoDataUri: string, size: number): SatoriNode {
         // Gradient border, done as a padded gradient background — satori has no
         // border-image, and this composites more predictably anyway.
         backgroundImage: `linear-gradient(135deg, ${COLORS.violet} 0%, ${COLORS.coral} 42%, ${COLORS.amber} 100%)`,
-        boxShadow: `0 24px 70px rgba(255,77,109,0.28)`,
+        // Deliberately no boxShadow: satori compiles it to an feGaussianBlur,
+        // and a large-radius blur over this area measured at ~350ms of resvg
+        // time per card — roughly half the total rasterisation cost. The glow
+        // behind the photo (see cardGlow) is a radial gradient instead, which
+        // looks near-identical and costs almost nothing.
       },
     },
     h("img", {
@@ -131,7 +135,8 @@ function titlePill(title: string, fontSize: number): SatoriNode {
       paddingBottom: 12,
       borderRadius: 9999,
       backgroundImage: `linear-gradient(100deg, ${COLORS.coral}, ${COLORS.amber})`,
-      boxShadow: `0 14px 38px rgba(255,110,90,0.32)`,
+      // No boxShadow here either — same blur cost, and the pill already reads as
+      // raised against the dark backdrop.
     },
     h("div", {
       style: { width: 9, height: 9, borderRadius: 9999, background: COLORS.night, opacity: 0.75 },
@@ -167,8 +172,18 @@ function metaLabel(label: string, value: string, size: number): SatoriNode {
   );
 }
 
-/** Shared backdrop: night base, two colour blooms, and the horizon arc. */
-function backdrop(width: number, height: number): SatoriNode[] {
+/**
+ * Shared backdrop: night base, colour blooms, and the horizon arc.
+ *
+ * `glow` sits behind the portrait and replaces the box-shadow that used to be
+ * there. A radial gradient rasterises far cheaper than the equivalent Gaussian
+ * blur while reading almost the same at this size.
+ */
+function backdrop(
+  width: number,
+  height: number,
+  glow: { x: string; y: string },
+): SatoriNode[] {
   return [
     h("div", {
       style: {
@@ -177,7 +192,7 @@ function backdrop(width: number, height: number): SatoriNode[] {
         left: 0,
         width,
         height,
-        backgroundImage: `radial-gradient(circle at 12% 8%, rgba(123,92,255,0.42) 0%, rgba(123,92,255,0) 46%), radial-gradient(circle at 88% 96%, rgba(255,77,109,0.38) 0%, rgba(255,77,109,0) 52%), radial-gradient(circle at 96% 18%, rgba(34,211,238,0.18) 0%, rgba(34,211,238,0) 40%)`,
+        backgroundImage: `radial-gradient(circle at ${glow.x} ${glow.y}, rgba(255,77,109,0.34) 0%, rgba(255,77,109,0) 34%), radial-gradient(circle at 12% 8%, rgba(123,92,255,0.42) 0%, rgba(123,92,255,0) 46%), radial-gradient(circle at 88% 96%, rgba(255,77,109,0.38) 0%, rgba(255,77,109,0) 52%), radial-gradient(circle at 96% 18%, rgba(34,211,238,0.18) 0%, rgba(34,211,238,0) 40%)`,
       },
     }),
     // The sunset arc — a wide, faint circle whose top edge reads as a horizon.
@@ -195,7 +210,12 @@ function backdrop(width: number, height: number): SatoriNode[] {
   ];
 }
 
-function shell(width: number, height: number, children: SatoriNode[]): SatoriNode {
+function shell(
+  width: number,
+  height: number,
+  glow: { x: string; y: string },
+  children: SatoriNode[],
+): SatoriNode {
   return h(
     "div",
     {
@@ -210,7 +230,7 @@ function shell(width: number, height: number, children: SatoriNode[]): SatoriNod
         fontFamily: BODY,
       },
     },
-    ...backdrop(width, height),
+    ...backdrop(width, height, glow),
     ...children,
   );
 }
@@ -247,7 +267,7 @@ function landscape(photoDataUri: string, fields: GenerateFields): SatoriNode {
   const { width, height } = OUTPUT_SIZES.landscape;
   const PAD = 62;
 
-  return shell(width, height, [
+  return shell(width, height, { x: "19%", y: "50%" }, [
     row(
       {
         position: "relative",
@@ -315,7 +335,7 @@ function square(photoDataUri: string, fields: GenerateFields): SatoriNode {
   const { width, height } = OUTPUT_SIZES.square;
   const PAD = 76;
 
-  return shell(width, height, [
+  return shell(width, height, { x: "22%", y: "37%" }, [
     col(
       {
         position: "relative",
