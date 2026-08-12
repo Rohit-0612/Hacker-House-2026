@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Sunset Coast — mirrors src/lib/brand.ts, which drives the generated PNGs.
+   Keep the two in sync so the site and the artwork never drift apart. */
+@theme {
+  --color-night: #070b1f;
+  --color-night-raised: #0d1330;
+  --color-coral: #ff4d6d;
+  --color-amber: #ff9e4a;
+  --color-violet: #7b5cff;
+  --color-surf: #22d3ee;
+  --color-ink: #f8fafc;
+  --color-muted: #94a3b8;
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-night);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* iOS Safari: stop the rubber-band scroll revealing white behind the page. */
+    overscroll-behavior-y: none;
+  }
+
+  /* A visible, consistent focus ring everywhere. Removing outlines without a
+     replacement is the most common way a keyboard user gets stranded. */
+  :focus-visible {
+    outline: 2px solid var(--color-surf);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-coral);
+    color: var(--color-night);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .text-sunset {
+    background-image: linear-gradient(96deg, var(--color-coral), var(--color-amber));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .bg-sunset {
+    background-image: linear-gradient(96deg, var(--color-coral), var(--color-amber));
+  }
+
+  .bg-sunset-full {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-violet),
+      var(--color-coral) 42%,
+      var(--color-amber)
+    );
+  }
+
+  /* Glass panels. The blur is dropped on low-end mobile via the media query
+     below, where a full-viewport backdrop-filter costs real frames. */
+  .glass {
+    background: color-mix(in oklab, var(--color-night-raised) 72%, transparent);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgb(248 250 252 / 0.09);
+  }
+
+  @media (max-width: 480px) {
+    .glass {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: color-mix(in oklab, var(--color-night-raised) 94%, transparent);
+    }
+  }
+
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
