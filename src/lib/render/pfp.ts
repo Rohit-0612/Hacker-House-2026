@@ -1,7 +1,7 @@
 import "server-only";
 
 import { BRAND, COLORS } from "../brand";
-import { arcPath, escapeXml } from "./svg";
+import { curvedTextToPaths } from "./curved-text";
 
 /**
  * The PFP frame is hand-authored SVG rather than a satori layout, because the
@@ -60,8 +60,6 @@ export function renderPfpSvg(photoDataUri: string): string {
       <circle cx="${C}" cy="${C}" r="${GEO.photoRadius}"/>
     </clipPath>
 
-    <path id="arcTop" d="${arcPath(C, C, GEO.textRadiusTop, "top")}"/>
-    <path id="arcBottom" d="${arcPath(C, C, GEO.textRadiusBottom, "bottom")}"/>
   </defs>
 
   <!-- The corners survive X's circular crop only when the avatar is shown square
@@ -88,15 +86,26 @@ export function renderPfpSvg(photoDataUri: string): string {
   <circle cx="${C}" cy="${C}" r="${GEO.ringOuter - 2}" fill="none"
           stroke="${COLORS.text}" stroke-width="1.5" stroke-opacity="0.22"/>
 
-  <text font-family="Space Grotesk" font-size="${GEO.fontSize}" font-weight="700"
-        fill="${COLORS.text}" letter-spacing="7">
-    <textPath xlink:href="#arcTop" startOffset="50%" text-anchor="middle">${escapeXml(BRAND.event)}</textPath>
-  </text>
+  ${curvedTextToPaths(BRAND.event, {
+    cx: C,
+    cy: C,
+    radius: GEO.textRadiusTop,
+    fontSize: GEO.fontSize,
+    letterSpacing: 7,
+    half: "top",
+    fill: COLORS.text,
+  })}
 
-  <text font-family="Space Grotesk" font-size="${GEO.fontSize}" font-weight="700"
-        fill="${COLORS.night}" letter-spacing="11" fill-opacity="0.92">
-    <textPath xlink:href="#arcBottom" startOffset="50%" text-anchor="middle">BUILDER</textPath>
-  </text>
+  ${curvedTextToPaths("BUILDER", {
+    cx: C,
+    cy: C,
+    radius: GEO.textRadiusBottom,
+    fontSize: GEO.fontSize,
+    letterSpacing: 11,
+    half: "bottom",
+    fill: COLORS.night,
+    fillOpacity: 0.92,
+  })}
 
   ${sideMarker(C - bandCenter, C)}
   ${sideMarker(C + bandCenter, C)}
