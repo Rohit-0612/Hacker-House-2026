@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getShareRecord } from "@/lib/blob";
 import { BRAND } from "@/lib/brand";
 import { absoluteUrl } from "@/lib/site";
+import { getShareRecord } from "@/lib/store";
 import type { OutputVariant } from "@/lib/types";
 
 interface Props {
@@ -16,6 +16,15 @@ export const revalidate = 3600;
 /** The variant X should unfurl: landscape matches summary_large_image. */
 function primary(images: { variant: OutputVariant; url: string; width: number; height: number }[]) {
   return images.find((i) => i.variant === "landscape") ?? images[0];
+}
+
+/**
+ * OG images must be absolute — crawlers silently drop relative URLs, which is
+ * exactly the blank-thumbnail failure the brief warns about. Blob returns
+ * absolute CDN URLs already; the dev-only local store returns app-relative ones.
+ */
+function toAbsolute(url: string): string {
+  return url.startsWith("/") ? absoluteUrl(url) : url;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -44,14 +53,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       url: absoluteUrl(`/s/${id}`),
       images: image
-        ? [{ url: image.url, width: image.width, height: image.height, alt: title }]
+        ? [{ url: toAbsolute(image.url), width: image.width, height: image.height, alt: title }]
         : [],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: image ? [image.url] : [],
+      images: image ? [toAbsolute(image.url)] : [],
     },
   };
 }

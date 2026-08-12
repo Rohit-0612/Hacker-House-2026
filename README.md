@@ -97,8 +97,22 @@ X's web intent **cannot attach an image**, so there are two paths and the app sh
    The intent URL carries that link, so X unfurls a card showing the actual graphic — which is
    the specific "not a blank thumbnail" requirement in the brief.
 
-Without a blob token the API returns inline `data:` URLs, download and mobile share keep working,
-and the link-share path is hidden. **The app never hard-fails on a missing env var.**
+Storage backend is chosen at runtime in `src/lib/store/index.ts`:
+
+| Situation | Backend | Share links |
+| --- | --- | --- |
+| `BLOB_READ_WRITE_TOKEN` set (production) | Vercel Blob | Yes — absolute CDN URLs |
+| Local dev, no token | Filesystem under `.next/cache/shares/` | Yes — served by `/api/share-asset/[id]/[variant]` |
+| On Vercel, no token | none | No — inline `data:` URLs |
+
+The local store exists so `/s/[id]` and its OG tags are testable with **zero environment
+variables**; otherwise the brief's headline requirement is unverifiable until after a deploy. It is
+deliberately gated on `!process.env.VERCEL`: serverless filesystems are per-instance and ephemeral,
+so a share link would resolve on the instance that wrote it and 404 on every other one, and
+intermittently broken links are worse than no links.
+
+**The app never hard-fails on a missing env var** — download and mobile Web Share work in all three
+rows above.
 
 ### Fonts
 
@@ -213,7 +227,16 @@ artwork without booting Next or clicking through the UI.
 - Full browser journey on a 390px mobile viewport, both formats, 0px horizontal overflow.
 - Real HEVC `.heic` → JPEG in-browser via `heic-to` (~470ms for a 1200×1800 photo).
 - Every error path returns a 4xx with a human-readable message: oversized, undersized, non-image,
-  missing file, empty fields, and undecodable HEIC.
+  missing file, empty fields, bad format, and undecodable HEIC.
+- **Share chain proven end to end**: generate → `/s/[id]` → `og:image` → fetch that URL → a real
+  1200×630 PNG of the actual card, with `twitter:card=summary_large_image`.
+- **0 axe-core violations** (WCAG 2.1 A/AA + best-practice) across `/`, `/create`, both result
+  states and `/s/[id]`; focus verifiably lands on the result heading after Generate.
+- **Load: 1.66s on emulated Fast-3G with 4× CPU throttling** (FCP 680ms), 348KB transferred. The
+  2.9MB libheif decoder is confirmed absent from initial load.
+- Path traversal on `/api/share-asset` rejected (`../`, encoded `%2f`, unknown variants → 404).
+- Storage selection verified in all three branches, including that the local store never engages
+  when `VERCEL` is set.
 
 ### Known limitation
 

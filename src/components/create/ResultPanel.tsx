@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
@@ -25,6 +25,21 @@ export function ResultPanel({ result, onRestart }: Props) {
   const [downloaded, setDownloaded] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // framer-motion animates via JS, so the prefers-reduced-motion block in
+  // globals.css does not reach it — the check has to happen here.
+  const reduced = useReducedMotion();
+
+  /**
+   * This panel replaces the form entirely, so without moving focus a keyboard
+   * or screen-reader user is left on a detached button with no idea the image
+   * was generated. The heading is focusable only programmatically (tabIndex -1),
+   * so it never joins the tab order.
+   */
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   const isCard = result.format === "card";
   const active =
@@ -83,14 +98,20 @@ export function ResultPanel({ result, onRestart }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: reduced ? 0 : 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: reduced ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="flex flex-col gap-6"
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <SuccessBadge />
-        <h2 className="font-display text-2xl font-bold">Your identity is ready</h2>
+        <SuccessBadge reduced={reduced} />
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className="font-display text-2xl font-bold outline-none"
+        >
+          Your identity is ready
+        </h2>
         <p className="text-sm text-muted">
           Generated in {(result.elapsedMs / 1000).toFixed(1)}s · {active.width}×{active.height} PNG
         </p>
@@ -123,10 +144,10 @@ export function ResultPanel({ result, onRestart }: Props) {
       <AnimatePresence mode="wait">
         <motion.div
           key={active.variant}
-          initial={{ opacity: 0, scale: 0.98 }}
+          initial={{ opacity: 0, scale: reduced ? 1 : 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.25 }}
+          exit={{ opacity: 0, scale: reduced ? 1 : 0.98 }}
+          transition={{ duration: reduced ? 0 : 0.25 }}
           className="flex justify-center"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -165,13 +186,15 @@ export function ResultPanel({ result, onRestart }: Props) {
           {sharing ? "Preparing…" : "Share to X"}
         </Button>
 
-        <div className="flex gap-2.5">
+        {/* Stacks on narrow phones: side by side, "Generate another" wraps onto
+            two lines at 390px and the row looks broken. */}
+        <div className="flex flex-col gap-1 min-[26rem]:flex-row min-[26rem]:gap-2.5">
           {shareUrl && (
-            <Button variant="ghost" onClick={handleCopyLink} className="flex-1">
+            <Button variant="ghost" onClick={handleCopyLink} className="min-[26rem]:flex-1">
               {copied ? "Link copied" : "Copy link"}
             </Button>
           )}
-          <Button variant="ghost" onClick={onRestart} className="flex-1">
+          <Button variant="ghost" onClick={onRestart} className="min-[26rem]:flex-1">
             Generate another
           </Button>
         </div>
@@ -203,12 +226,12 @@ export function ResultPanel({ result, onRestart }: Props) {
   );
 }
 
-function SuccessBadge() {
+function SuccessBadge({ reduced }: { reduced: boolean | null }) {
   return (
     <motion.span
-      initial={{ scale: 0, rotate: -25 }}
-      animate={{ scale: 1, rotate: 0 }}
-      transition={{ type: "spring", stiffness: 320, damping: 16 }}
+      initial={reduced ? { opacity: 0 } : { scale: 0, rotate: -25 }}
+      animate={reduced ? { opacity: 1 } : { scale: 1, rotate: 0 }}
+      transition={reduced ? { duration: 0.15 } : { type: "spring", stiffness: 320, damping: 16 }}
       className="mb-1 flex size-12 items-center justify-center rounded-full bg-sunset text-night"
       aria-hidden
     >

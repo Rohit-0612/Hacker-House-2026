@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  isBlobConfigured,
-  newShareId,
-  putShareImage,
-  putShareRecord,
-  type ShareRecord,
-} from "@/lib/blob";
+import { getShareStore, newShareId, type ShareRecord } from "@/lib/store";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { renderCardPng } from "@/lib/render/card";
 import { PhotoError, processPhoto } from "@/lib/render/photo";
@@ -22,7 +16,9 @@ import { MAX_FILE_BYTES, fieldsSchema, formatSchema, sanitizeText } from "@/lib/
 
 // sharp and resvg are native modules; neither runs on the edge runtime.
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// Declared here rather than in vercel.json: as segment config Vercel clamps it
+// to whatever the account's plan allows, where a vercel.json `functions` entry
+// exceeding the plan limit fails the deployment outright.
 export const maxDuration = 30;
 
 /** Photo is downscaled to roughly its on-canvas size before being inlined as a
@@ -113,20 +109,28 @@ export async function POST(request: Request): Promise<NextResponse> {
     return fail("render_failed", "Something broke while generating. Try again.", 500);
   }
 
-  // Persist. Blob storage is what makes the X link preview show the real
-  // graphic; without a token we hand back inline data URLs so the tool still
-  // works locally, just without the link-share path.
+  // Persist. A durable store is what makes the X link preview show the real
+  // graphic; with nowhere to write we hand back inline data URLs so the tool
+  // still works, just without the link-share path.
+  const inlineImages = (): GeneratedImage[] =>
+    pngs.map(({ variant, png }) => ({
+      variant,
+      url: `data:image/png;base64,${png.toString("base64")}`,
+      ...OUTPUT_SIZES[variant],
+    }));
+
   let images: GeneratedImage[];
   let shareId: string | null = null;
   let inline = true;
 
-  if (isBlobConfigured()) {
+  const store = getShareStore();
+  if (store) {
     try {
       const id = newShareId();
       images = await Promise.all(
         pngs.map(async ({ variant, png }) => ({
           variant,
-          url: await putShareImage(id, variant, png),
+          url: await store.putImage(id, variant, png),
           ...OUTPUT_SIZES[variant],
         })),
       );
@@ -137,24 +141,16 @@ export async function POST(request: Request): Promise<NextResponse> {
         images,
         createdAt: new Date().toISOString(),
       };
-      await putShareRecord(record);
+      await store.putRecord(record);
       shareId = id;
       inline = false;
     } catch (err) {
       // Storage is a share enhancement, never a reason to lose the user's image.
-      console.error("[generate] blob upload failed, falling back to inline", err);
-      images = pngs.map(({ variant, png }) => ({
-        variant,
-        url: `data:image/png;base64,${png.toString("base64")}`,
-        ...OUTPUT_SIZES[variant],
-      }));
+      console.error(`[generate] ${store.kind} store failed, falling back to inline`, err);
+      images = inlineImages();
     }
   } else {
-    images = pngs.map(({ variant, png }) => ({
-      variant,
-      url: `data:image/png;base64,${png.toString("base64")}`,
-      ...OUTPUT_SIZES[variant],
-    }));
+    images = inlineImages();
   }
 
   const result: GenerateResult = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -31,6 +31,10 @@ export function CreateFlow() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [progress, setProgress] = useState(0);
+
+  // framer-motion animates via JS and so ignores the prefers-reduced-motion
+  // rules in globals.css; it has to be checked explicitly.
+  const reduced = useReducedMotion();
 
   // Object URLs are revoked on replace and unmount; leaking them pins the whole
   // decoded bitmap in memory, which matters on phones.
@@ -155,10 +159,10 @@ export function CreateFlow() {
       <AnimatePresence initial={false}>
         {format === "card" && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, height: reduced ? "auto" : 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, height: reduced ? "auto" : 0 }}
+            transition={{ duration: reduced ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
             <DetailsForm

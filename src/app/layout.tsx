@@ -43,7 +43,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
+  appleWebApp: { capable: true, title: "Frame In Goa", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
