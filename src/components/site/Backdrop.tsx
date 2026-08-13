@@ -16,22 +16,28 @@ export function Backdrop() {
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       {/* Anchored to the foot of the viewport and held to a share of its width,
           so they frame the page rather than crowding the wordmark. */}
-      {/* Sized by *width* on phones. Height-driven sizing made each palm about
-          424px wide against a 390px viewport, so the two overlapped across the
-          middle and read as one tangled thicket. */}
+      {/* On phones the palms are *cropped* to a tall narrow column rather than
+          scaled down. Scaling by width capped their height too — they ended up
+          squashed into the bottom third with dead green above — while scaling by
+          height made each one wider than half the viewport, so the pair tangled
+          in the middle. object-cover decouples the two: full height, narrow
+          footprint. `object-bottom` keeps the trunks anchored to the foot. */}
       <Palms
         side="left"
-        className="absolute bottom-0 -left-[7vw] w-[38vw] max-w-none opacity-40 sm:-left-[6vw] sm:h-[88%] sm:w-auto sm:opacity-55"
+        className="absolute -left-[9vw] top-0 w-[52vw] max-w-none opacity-70 sm:-left-[6vw] sm:top-auto sm:bottom-0 sm:h-[88%] sm:w-auto sm:opacity-55"
       />
       <Palms
         side="right"
-        className="absolute bottom-0 -right-[7vw] w-[38vw] max-w-none opacity-40 sm:-right-[6vw] sm:h-[88%] sm:w-auto sm:opacity-55"
+        className="absolute -right-[9vw] top-0 w-[52vw] max-w-none opacity-70 sm:-right-[6vw] sm:top-auto sm:bottom-0 sm:h-[88%] sm:w-auto sm:opacity-55"
       />
 
-      {/* Depth: a warm glow behind the fold, and a darkening toward the foot so
-          long pages don't read as one flat field of green. */}
-      <div className="absolute inset-0 bg-[radial-gradient(70%_45%_at_50%_18%,rgba(247,224,23,0.10),transparent_70%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_55%,rgba(8,42,17,0.45))]" />
+      {/* Depth. Without these the areas the palms don't reach read as one flat
+          field of green — most obvious on a phone, where the trees only cover
+          the top third. A warm glow behind the wordmark, a horizon lift through
+          the middle, and a vignette into the foot. */}
+      <div className="absolute inset-0 bg-[radial-gradient(65%_42%_at_50%_22%,rgba(247,224,23,0.14),transparent_72%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(120%_55%_at_50%_78%,rgba(247,224,23,0.07),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(8,42,17,0.28),transparent_28%,transparent_58%,rgba(8,42,17,0.55))]" />
 
       {/* Print texture, now covering the whole document rather than one band. */}
       <div className="scanlines absolute inset-0" />
