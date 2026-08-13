@@ -1,19 +1,28 @@
 @import "tailwindcss";
+@import "react-image-crop/dist/ReactCrop.css";
 
-/* Sunset Coast — mirrors src/lib/brand.ts, which drives the generated PNGs.
+/* Mirrors src/lib/brand.ts, which drives the canvas-drawn pass.
    Keep the two in sync so the site and the artwork never drift apart. */
 @theme {
-  --color-night: #070b1f;
-  --color-night-raised: #0d1330;
-  --color-coral: #ff4d6d;
-  --color-amber: #ff9e4a;
-  --color-violet: #7b5cff;
-  --color-surf: #22d3ee;
-  --color-ink: #f8fafc;
-  --color-muted: #94a3b8;
+  /* Sampled from the supplied palm artwork — the palms are opaque crops sitting
+     on this ground, so matching it is what keeps their edges invisible. */
+  --color-jungle: #2c663d;
+  --color-jungle-deep: #082a11;
+  --color-jungle-panel: #123b1f;
+  --color-jungle-line: #1f5c33;
+  --color-gold: #f0c018;
+  --color-gold-deep: #d9a800;
+  --color-lemon: #f7e017;
+  --color-magenta: #f4007a;
+  --color-magenta-deep: #c4005f;
+  --color-ink: #0a0a0a;
+  --color-paper: #ffffff;
+  --color-muted: #9fc6ac;
 
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-condensed: var(--font-anton), "Arial Narrow", Impact, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", monospace;
+  --font-deva: var(--font-baloo), var(--font-anton), sans-serif;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -25,9 +34,12 @@
   }
 
   body {
-    background-color: var(--color-night);
-    color: var(--color-ink);
-    font-family: var(--font-sans);
+    /* One ground for the whole document. Sections paint no background of their
+       own — per-section colours drew a hard horizontal seam at every boundary,
+       and the palm crops can only sit on this exact green. */
+    background-color: var(--color-jungle);
+    color: var(--color-paper);
+    font-family: var(--font-mono);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     /* iOS Safari: stop the rubber-band scroll revealing white behind the page. */
@@ -37,14 +49,14 @@
   /* A visible, consistent focus ring everywhere. Removing outlines without a
      replacement is the most common way a keyboard user gets stranded. */
   :focus-visible {
-    outline: 2px solid var(--color-surf);
+    outline: 2px solid var(--color-lemon);
     outline-offset: 3px;
-    border-radius: 4px;
+    border-radius: 2px;
   }
 
   ::selection {
-    background: var(--color-coral);
-    color: var(--color-night);
+    background: var(--color-magenta);
+    color: var(--color-paper);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -61,42 +73,95 @@
   }
 }
 
-@layer utilities {
-  .text-sunset {
-    background-image: linear-gradient(96deg, var(--color-coral), var(--color-amber));
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
+@layer components {
+  /* react-image-crop ships light-theme chrome; restate it on the dark palette. */
+  .ReactCrop__crop-selection {
+    border-image: none !important;
+    border: 2px solid var(--color-lemon) !important;
+    box-shadow: 0 0 0 9999em rgb(8 42 17 / 0.72);
   }
 
-  .bg-sunset {
-    background-image: linear-gradient(96deg, var(--color-coral), var(--color-amber));
+  .ReactCrop__drag-handle::after {
+    background-color: var(--color-lemon);
+    border: 1px solid var(--color-ink);
+    width: 14px;
+    height: 14px;
   }
 
-  .bg-sunset-full {
-    background-image: linear-gradient(
-      135deg,
-      var(--color-violet),
-      var(--color-coral) 42%,
-      var(--color-amber)
-    );
-  }
-
-  /* Glass panels. The blur is dropped on low-end mobile via the media query
-     below, where a full-viewport backdrop-filter costs real frames. */
-  .glass {
-    background: color-mix(in oklab, var(--color-night-raised) 72%, transparent);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-    border: 1px solid rgb(248 250 252 / 0.09);
-  }
-
-  @media (max-width: 480px) {
-    .glass {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      background: color-mix(in oklab, var(--color-night-raised) 94%, transparent);
+  /* Touch targets: the visual handle stays 14px, the grab area grows to 44px. */
+  @media (pointer: coarse) {
+    .ReactCrop__drag-handle {
+      width: 44px;
+      height: 44px;
     }
+  }
+}
+
+@layer components {
+  /* Beach-signpost arrowheads for the stats.
+     Mobile stacks every sign to the right of a single post, so they all point
+     the same way; only from `sm` up, where the post runs down the middle, do
+     alternate signs point back to the left. A clip-path can't be swapped from
+     an inline style at a breakpoint, hence the classes. */
+  .sign {
+    clip-path: polygon(0 0, calc(100% - 2.2rem) 0, 100% 50%, calc(100% - 2.2rem) 100%, 0 100%);
+  }
+
+  @media (min-width: 40rem) {
+    .sign-left {
+      clip-path: polygon(2.2rem 0, 100% 0, 100% 100%, 2.2rem 100%, 0 50%);
+    }
+  }
+}
+
+@layer utilities {
+  /* Entrance reveals are CSS, not JS.
+     The hero headline must be readable before hydration (and if hydration never
+     happens), and a JS-driven `initial` state would serialise into the HTML as
+     translateY(110%) — an invisible <h1>. CSS also gets reduced-motion handling
+     free from the @media rule above, with no server/client branch to mismatch. */
+  @keyframes hh-rise {
+    from {
+      transform: translateY(110%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hh-fade {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-rise {
+    animation: hh-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .animate-fade {
+    animation: hh-fade 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  /* Terminal register: hairline scanlines over the jungle ground. */
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.5) 0px,
+      rgb(0 0 0 / 0.5) 1px,
+      transparent 1px,
+      transparent 4px
+    );
   }
 
   .grain::after {
@@ -104,7 +169,19 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.035;
+    opacity: 0.04;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Mono labels sit small and wide throughout the design. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .stack-shadow {
+    text-shadow: 3px 3px 0 var(--color-ink);
   }
 }

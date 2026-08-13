@@ -1,53 +1,48 @@
-/** The two output formats from the HH Goa 2026 brief. */
-export type Format = "pfp" | "card";
+/** The two things the generator can draw. */
+export type Format = "pass" | "pfp";
 
-/** Card aspect variants. Landscape is the share default (matches summary_large_image). */
-export type CardVariant = "landscape" | "square";
-
-export type OutputVariant = "pfp" | CardVariant;
+/**
+ * `pass` / `pfp` are the download artefacts; `og` is the 1200×630 board the
+ * chosen artefact is centred on so X unfurls it whole instead of cropping it.
+ */
+export type OutputVariant = Format | "og";
 
 export const OUTPUT_SIZES: Record<OutputVariant, { width: number; height: number }> = {
-  pfp: { width: 1000, height: 1000 },
-  landscape: { width: 1200, height: 630 },
-  square: { width: 1080, height: 1080 },
+  pass: { width: 3200, height: 1800 },
+  pfp: { width: 2000, height: 2000 },
+  // 2× the 1200×630 board. X accepts it and the extra density is what keeps
+  // small mono type on the ticket legible in a timeline unfurl.
+  og: { width: 2400, height: 1260 },
 };
 
-export interface GenerateFields {
+export interface PassFields {
   name: string;
-  stack: string;
-  title: string;
+  team: string;
+  role: string;
+  city: string;
 }
 
-export interface GeneratedImage {
+/** Ticket data derived deterministically from the fields — see lib/pass/identity.ts. */
+export interface PassIdentity {
+  ticketNo: string;
+  builderId: string;
+  pnr: string;
+  seat: string;
+  coach: string;
+  platform: string;
+}
+
+export interface ShareImage {
   variant: OutputVariant;
-  /** Blob URL when storage is configured, otherwise an inline data: URL. */
+  /** Blob URL when storage is configured, otherwise served by the dev-only local store. */
   url: string;
   width: number;
   height: number;
 }
 
-export interface GenerateResult {
-  format: Format;
-  images: GeneratedImage[];
-  fields: GenerateFields | null;
-  /** Present only when blob storage is configured; drives the /s/[id] OG share path. */
-  shareId: string | null;
-  /** True when images are inline data URLs (no blob storage configured). */
-  inline: boolean;
-  elapsedMs: number;
-}
-
 export interface ApiError {
   error: string;
-  code:
-    | "no_file"
-    | "too_large"
-    | "bad_type"
-    | "too_small"
-    | "too_big_dimensions"
-    | "decode_failed"
-    | "bad_fields"
-    | "render_failed";
+  code: "bad_id" | "bad_fields" | "no_image" | "too_large" | "exists" | "no_store" | "failed";
 }
 
 export function isApiError(value: unknown): value is ApiError {

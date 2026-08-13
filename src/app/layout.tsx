@@ -1,55 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
-import { BRAND } from "@/lib/brand";
-import { absoluteUrl, siteUrl } from "@/lib/site";
+import { Backdrop } from "@/components/site/Backdrop";
+import { Motion } from "@/components/site/Motion";
+import { BRAND, COLORS } from "@/lib/brand";
+import { fontVariables } from "@/lib/fonts";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
-// Self-hosted by Next at build time — no runtime request to Google, and no
-// layout shift from a late-arriving webfont.
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-space-grotesk",
-  display: "swap",
-});
+const title = `${BRAND.eventFull} — ${BRAND.passName}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: {
-    default: `Frame In Goa — ${BRAND.event}`,
-    template: `%s — Frame In Goa`,
-  },
+  title: { default: title, template: `%s — ${BRAND.event}` },
   description: BRAND.tagline,
-  applicationName: "Frame In Goa",
+  applicationName: BRAND.eventFull,
+  keywords: ["Hacker House Goa", "HH Goa 2026", "hackathon", "Goa", "builder pass"],
   openGraph: {
-    title: `Frame In Goa — ${BRAND.event}`,
+    title,
     description: BRAND.tagline,
     url: siteUrl(),
-    siteName: "Frame In Goa",
-    images: [{ url: absoluteUrl("/api/og"), width: 1200, height: 630, alt: BRAND.tagline }],
+    siteName: BRAND.eventFull,
     type: "website",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: `Frame In Goa — ${BRAND.event}`,
-    description: BRAND.tagline,
-    images: [absoluteUrl("/api/og")],
-  },
+  twitter: { card: "summary_large_image", title, description: BRAND.tagline },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
-  appleWebApp: { capable: true, title: "Frame In Goa", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: BRAND.event, statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#070B1F",
+  themeColor: COLORS.jungleDeep,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -57,15 +38,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" className={fontVariables}>
       <body className="min-h-dvh antialiased">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:font-semibold focus:text-night"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-lemon focus:px-4 focus:py-2 focus:font-condensed focus:text-ink"
         >
           Skip to content
         </a>
-        {children}
+        <Backdrop />
+        <Motion>{children}</Motion>
       </body>
     </html>
   );

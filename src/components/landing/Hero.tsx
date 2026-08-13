@@ -1,60 +1,100 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import Link from "next/link";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import { BRAND } from "@/lib/brand";
+import { GoaBadge, Sun, Waves } from "./Motifs";
+
+const WORDS = ["HACKER", "HOUSE"];
 
 export function Hero() {
-  const reduced = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
 
-  const rise = (delay: number) => ({
-    initial: { opacity: 0, y: reduced ? 0 : 22 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] as const },
-  });
+  // Scroll-linked parallax on the foliage. Purely additive: at scroll position 0
+  // — which is what the server renders — every value is its identity, so there
+  // is nothing here that can disagree with the SSR'd markup.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const palmY = useTransform(scrollYProgress, [0, 1], ["0%", "26%"]);
+  const sunY = useTransform(scrollYProgress, [0, 1], ["0%", "-40%"]);
 
   return (
-    <section className="relative flex flex-col items-center px-5 pt-20 pb-14 text-center sm:pt-28">
-      <motion.span
-        {...rise(0)}
-        className="glass mb-7 inline-flex items-center gap-2.5 rounded-full px-4 py-2"
+    <section
+      ref={ref}
+      className="relative flex min-h-[92svh] flex-col px-5 pt-6 pb-14 sm:px-8"
+    >
+      <motion.div
+        aria-hidden
+        style={{ y: sunY }}
+        className="pointer-events-none absolute inset-x-0 top-[38%] -z-10 flex justify-center"
       >
-        <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-coral" />
-        <span className="font-display text-[0.7rem] font-bold tracking-[0.26em] text-ink/90">
-          {BRAND.event}
-        </span>
-      </motion.span>
-
-      <motion.h1
-        {...rise(0.08)}
-        className="max-w-4xl font-display text-5xl leading-[0.95] font-bold tracking-tight sm:text-7xl lg:text-8xl"
-      >
-        Frame In <span className="text-sunset">Goa</span>
-      </motion.h1>
-
-      <motion.p {...rise(0.16)} className="mt-6 max-w-xl text-base text-muted sm:text-lg">
-        {BRAND.tagline}. Upload one photo — get a branded profile picture or builder ID card,
-        ready to post.
-      </motion.p>
-
-      <motion.div {...rise(0.24)} className="mt-9 flex flex-col items-center gap-4">
-        <Link
-          href="/create"
-          className="inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-sunset px-9 font-display text-base font-bold text-night shadow-[0_20px_54px_-16px_rgba(255,110,90,0.9)] transition-transform duration-200 motion-safe:hover:scale-[1.04] motion-safe:active:scale-95"
-        >
-          Create yours
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden className="size-[1.15rem]">
-            <path
-              d="M5 12h13m0 0-5.5-5.5M18 12l-5.5 5.5"
-              stroke="currentColor"
-              strokeWidth="2.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-        <p className="text-xs text-muted">No login · Free · Takes about 10 seconds</p>
+        <Sun className="w-[min(76vw,40rem)] text-lemon/20" />
       </motion.div>
+
+      <motion.div aria-hidden style={{ y: palmY }} className="pointer-events-none absolute inset-x-0 bottom-0 -z-10">
+        <Waves className="h-24 w-full text-paper/10" />
+      </motion.div>
+
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center gap-8 pt-16 sm:pt-20">
+        <h1 className="relative text-center leading-[0.82] text-lemon">
+          <span className="sr-only">
+            {BRAND.eventFull} — {BRAND.dates}
+          </span>
+
+          <span aria-hidden className="block">
+            {WORDS.map((word, i) => (
+              <span key={word} className="block overflow-hidden py-[0.02em]">
+                <span
+                  style={{ animationDelay: `${0.1 + i * 0.12}s` }}
+                  className="animate-rise block font-display text-[clamp(3.6rem,17vw,11rem)] font-bold tracking-[-0.02em]"
+                >
+                  {word}
+                </span>
+              </span>
+            ))}
+          </span>
+
+          {/* Anchored to the heading, not to a word: each word sits in an
+              overflow-hidden box so its reveal can be masked, and a badge
+              positioned inside one of those gets its lower half sliced off.
+              Centred on the h1 lands it on the join between the two lines,
+              which is where the event's own lockup puts it. */}
+          <GoaBadge
+            aria-hidden
+            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-[clamp(1.6rem,6.4vw,4rem)]"
+          />
+        </h1>
+
+        <div
+          style={{ animationDelay: "0.55s" }}
+          className="animate-fade flex flex-col items-center gap-6"
+        >
+          <p className="label flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-lemon">
+            <span>{BRAND.location}</span>
+            <span aria-hidden className="text-magenta">
+              ·
+            </span>
+            <span>{BRAND.dates}</span>
+            <span aria-hidden className="text-magenta">
+              ·
+            </span>
+            <span>{BRAND.studio}</span>
+          </p>
+
+          <a
+            href="#pass"
+            className="group inline-flex min-h-14 items-center gap-3 rounded-lg border-2 border-ink bg-gold px-8 font-condensed text-base tracking-[0.16em] text-ink uppercase shadow-[5px_5px_0_var(--color-ink)] transition-transform duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-x-[3px] motion-safe:active:translate-y-[3px] motion-safe:active:shadow-none"
+          >
+            Get your baggage label
+            <span aria-hidden className="transition-transform group-hover:translate-x-1">
+              →
+            </span>
+          </a>
+
+          <p className="label text-center text-paper/60">
+            Upload one photo · No signup · Ready in seconds
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

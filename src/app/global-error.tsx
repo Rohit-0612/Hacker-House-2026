@@ -25,13 +25,13 @@ export default function GlobalError({
           gap: "1rem",
           padding: "1.25rem",
           textAlign: "center",
-          background: "#070B1F",
-          color: "#F8FAFC",
+          background: "#082A11",
+          color: "#FFFFFF",
           fontFamily: "ui-sans-serif, system-ui, sans-serif",
         }}
       >
         <h1 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0 }}>Something went wrong</h1>
-        <p style={{ color: "#94A3B8", fontSize: "0.9rem", maxWidth: "24rem", margin: 0 }}>
+        <p style={{ color: "#9FC6AC", fontSize: "0.9rem", maxWidth: "24rem", margin: 0 }}>
           The app hit an unexpected error and couldn&apos;t recover on its own.
         </p>
         <button
@@ -39,18 +39,18 @@ export default function GlobalError({
           style={{
             minHeight: "3rem",
             padding: "0 1.75rem",
-            borderRadius: "999px",
+            borderRadius: "0.5rem",
             border: 0,
             cursor: "pointer",
             fontWeight: 700,
-            color: "#070B1F",
-            background: "linear-gradient(96deg, #FF4D6D, #FF9E4A)",
+            color: "#0A0A0A",
+            background: "#F0C018",
           }}
         >
           Reload
         </button>
         {error.digest && (
-          <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.7rem", margin: 0 }}>
+          <p style={{ color: "rgba(159,198,172,0.6)", fontSize: "0.7rem", margin: 0 }}>
             ref {error.digest}
           </p>
         )}

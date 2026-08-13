@@ -1,13 +1,19 @@
 import { z } from "zod";
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_BYTES = 12 * 1024 * 1024; // 12MB
+/** Below this the photo is too soft for a 300px-wide panel on a 3200px export. */
 export const MIN_DIMENSION = 200;
-export const MAX_DIMENSION = 8000;
+/**
+ * Ceiling on the published share image, so /api/pass can't be used as free
+ * object storage. The board encodes to roughly 250KB of JPEG, so 3MB is a very
+ * loose guard rather than a limit anyone should meet.
+ */
+export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 /**
- * HEIC must be converted to JPEG client-side before upload — sharp's prebuilt
- * binary ships no HEVC decoder, so the server genuinely cannot read it (see
- * src/lib/heic.ts and the decode fallback in src/lib/render/photo.ts).
+ * HEIC is converted to JPEG in the browser before anything else touches it
+ * (src/lib/heic.ts) — no browser but Safari can paint it in an <img>, and the
+ * crop UI needs a paintable image.
  *
  * The extension is accepted alongside the MIME type because Safari reports
  * inconsistent types for iPhone photos, sometimes an empty string.
@@ -41,15 +47,12 @@ export function hasAcceptedExtension(name: string): boolean {
   return ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
-/**
- * Client-side pre-flight. The server re-validates everything from actual image
- * bytes — this exists purely to fail fast and give a useful message.
- */
+/** Fail fast with a useful message before paying for a decode. */
 export function validateFile(file: File): string | null {
   if (file.size === 0) return "That file looks empty. Try another photo.";
   if (file.size > MAX_FILE_BYTES) {
     const mb = (file.size / 1024 / 1024).toFixed(1);
-    return `That photo is ${mb}MB — the limit is 10MB. Try a smaller one.`;
+    return `That photo is ${mb}MB — the limit is 12MB. Try a smaller one.`;
   }
   const typeOk = (ACCEPTED_MIME as readonly string[]).includes(file.type);
   if (!typeOk && !hasAcceptedExtension(file.name)) {
@@ -61,18 +64,22 @@ export function validateFile(file: File): string | null {
 const trimmed = (max: number) => z.string().trim().max(max);
 
 export const fieldsSchema = z.object({
-  name: trimmed(28).min(1, "Add your name"),
-  stack: trimmed(32).min(1, "Add your stack or role"),
-  title: trimmed(32).min(1, "Pick a builder title"),
+  name: trimmed(24).min(1, "Add your name"),
+  team: trimmed(24).min(1, "Add a team name"),
+  role: trimmed(26).min(1, "Add your role or stack"),
+  city: trimmed(20).min(1, "Where are you travelling from?"),
 });
 
 export type Fields = z.infer<typeof fieldsSchema>;
 
-export const formatSchema = z.enum(["pfp", "card"]);
+export const formatSchema = z.enum(["pass", "pfp"]);
 
 /**
- * Strips control characters and collapses whitespace. Satori renders whatever it
- * is handed, so unchecked input can break the layout (or smuggle in RTL overrides).
+ * Strips control characters and collapses whitespace.
+ *
+ * The canvas draws whatever it is handed, and the same strings are echoed on the
+ * share page — so bidi overrides and zero-width joiners are removed here rather
+ * than being allowed to scramble either surface.
  */
 export function sanitizeText(value: string, max: number): string {
   return Array.from(value.normalize("NFC"))

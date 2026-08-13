@@ -1,7 +1,13 @@
 import "server-only";
 
 import { list, put } from "@vercel/blob";
-import { isValidShareId, type ShareRecord, type ShareStore } from "./types";
+import {
+  IMAGE_EXTENSIONS,
+  isValidShareId,
+  type ImageContentType,
+  type ShareRecord,
+  type ShareStore,
+} from "./types";
 import type { OutputVariant } from "../types";
 
 /**
@@ -14,10 +20,15 @@ const prefixFor = (id: string) => `shares/${id}/`;
 export const blobStore: ShareStore = {
   kind: "blob",
 
-  async putImage(id: string, variant: OutputVariant, png: Buffer): Promise<string> {
-    const blob = await put(`${prefixFor(id)}${variant}.png`, png, {
+  async putImage(
+    id: string,
+    variant: OutputVariant,
+    bytes: Buffer,
+    contentType: ImageContentType,
+  ): Promise<string> {
+    const blob = await put(`${prefixFor(id)}${variant}.${IMAGE_EXTENSIONS[contentType]}`, bytes, {
       access: "public",
-      contentType: "image/png",
+      contentType,
       addRandomSuffix: false,
       cacheControlMaxAge: 60 * 60 * 24 * 365,
     });

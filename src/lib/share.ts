@@ -1,18 +1,15 @@
 import { BRAND } from "./brand";
 import type { Format } from "./types";
 
-const CAPTIONS: Record<Format, string> = {
-  pfp: `Heading to HH Goa 2026 with my builder identity.\n\n${BRAND.hashtag}`,
-  card: `Heading to HH Goa 2026 with my builder identity.\n\n${BRAND.hashtag}`,
-};
+const CAPTION = `All aboard. I'm heading to Hacker House Goa 2026 — 28–31 Oct.\n\n${BRAND.hashtag}`;
 
-export function captionFor(format: Format): string {
-  return CAPTIONS[format];
+export function captionFor(_format: Format): string {
+  return CAPTION;
 }
 
 /**
  * X web intent. An image cannot be attached via intent, so when a share URL is
- * available we pass it and let X unfurl the OG card — which is why /s/[id]
+ * available we pass it and let X unfurl the OG card — which is why /pass/[id]
  * points og:image at the generated PNG.
  */
 export function xIntentUrl(format: Format, shareUrl?: string | null): string {
@@ -45,10 +42,12 @@ export async function shareFile(file: File, format: Format): Promise<boolean> {
   }
 }
 
-export async function urlToFile(url: string, filename: string): Promise<File> {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  return new File([blob], filename, { type: "image/png" });
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  downloadUrl(url, filename);
+  // Revoked on the next tick: revoking synchronously can beat the click through
+  // on Safari and silently download nothing.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export function downloadUrl(url: string, filename: string): void {
@@ -68,5 +67,31 @@ export function filenameFor(format: Format, name?: string): string {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 24) || "builder";
-  return format === "pfp" ? `hh-goa-2026-pfp-${slug}.png` : `hh-goa-2026-id-${slug}.png`;
+  return format === "pfp" ? `hh-goa-2026-pfp-${slug}.png` : `hh-goa-2026-pass-${slug}.png`;
+}
+
+/**
+ * A tab claimed synchronously inside a click handler.
+ *
+ * `window.open()` only counts as user-initiated for as long as the handler is on
+ * the stack — call it after an `await` and iOS Safari swallows it. So the tab is
+ * opened empty at click time and navigated once the upload resolves. Returns a
+ * navigator that falls back to the current tab if the popup was blocked anyway.
+ */
+export function claimTab(): (url: string) => void {
+  const win = typeof window !== "undefined" ? window.open("", "_blank") : null;
+  if (win) win.opener = null;
+
+  return (url: string) => {
+    if (win && !win.closed) win.location.replace(url);
+    else window.location.href = url;
+  };
+}
+
+/** Resolves to `null` after `ms` — used to cap how long a share waits on upload. */
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise.catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
 }

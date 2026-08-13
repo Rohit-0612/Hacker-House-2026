@@ -3,7 +3,13 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { OUTPUT_SIZES, type OutputVariant } from "../types";
-import { isValidShareId, type ShareRecord, type ShareStore } from "./types";
+import {
+  IMAGE_EXTENSIONS,
+  isValidShareId,
+  type ImageContentType,
+  type ShareRecord,
+  type ShareStore,
+} from "./types";
 
 /**
  * Filesystem-backed store for local development ONLY.
@@ -32,11 +38,16 @@ function dirFor(id: string): string {
 export const localStore: ShareStore = {
   kind: "local",
 
-  async putImage(id: string, variant: OutputVariant, png: Buffer): Promise<string> {
+  async putImage(
+    id: string,
+    variant: OutputVariant,
+    bytes: Buffer,
+    contentType: ImageContentType,
+  ): Promise<string> {
     await fs.mkdir(dirFor(id), { recursive: true });
-    await fs.writeFile(path.join(dirFor(id), `${variant}.png`), png);
+    await fs.writeFile(path.join(dirFor(id), `${variant}.${IMAGE_EXTENSIONS[contentType]}`), bytes);
     // Relative; the API route and share page make it absolute where required.
-    return `/api/share-asset/${id}/${variant}`;
+    return `/api/pass-asset/${id}/${variant}`;
   },
 
   async putRecord(record: ShareRecord): Promise<void> {
@@ -57,12 +68,23 @@ export const localStore: ShareStore = {
   },
 };
 
-/** Reads a stored PNG. Both segments are validated before touching the disk. */
-export async function readLocalImage(id: string, variant: string): Promise<Buffer | null> {
+/**
+ * Reads a stored image and reports its type, so the route can serve an honest
+ * Content-Type. Both path segments are validated before touching the disk.
+ */
+export async function readLocalImage(
+  id: string,
+  variant: string,
+): Promise<{ bytes: Buffer; contentType: ImageContentType } | null> {
   if (!isValidShareId(id) || !isValidVariant(variant)) return null;
-  try {
-    return await fs.readFile(path.join(dirFor(id), `${variant}.png`));
-  } catch {
-    return null;
+
+  for (const [contentType, ext] of Object.entries(IMAGE_EXTENSIONS)) {
+    try {
+      const bytes = await fs.readFile(path.join(dirFor(id), `${variant}.${ext}`));
+      return { bytes, contentType: contentType as ImageContentType };
+    } catch {
+      // try the next extension
+    }
   }
+  return null;
 }

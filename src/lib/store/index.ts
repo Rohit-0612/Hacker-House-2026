@@ -4,7 +4,7 @@ import { blobStore } from "./blob";
 import { localStore } from "./local";
 import type { ShareStore } from "./types";
 
-export { newShareId, isValidShareId } from "./types";
+export { isValidShareId } from "./types";
 export type { ShareRecord, ShareStore } from "./types";
 
 function onVercel(): boolean {
@@ -21,7 +21,7 @@ export function isBlobConfigured(): boolean {
  * path. Storage is an enhancement; the generator never depends on it.
  *
  *   Blob token present  -> Vercel Blob (production, and locally if you pull the token)
- *   local dev, no token -> filesystem, so /s/[id] and OG tags stay testable
+ *   local dev, no token -> filesystem, so /pass/[id] and OG tags stay testable
  *   on Vercel, no token -> null; ephemeral per-instance disk would hand out
  *                          share links that 404 on other instances
  */

@@ -3,13 +3,13 @@ import { BRAND, COLORS } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `Frame In Goa — ${BRAND.event}`,
-    short_name: "Frame In Goa",
+    name: `${BRAND.eventFull} — ${BRAND.passName}`,
+    short_name: BRAND.event,
     description: BRAND.tagline,
-    start_url: "/create",
+    start_url: "/#pass",
     display: "standalone",
-    background_color: COLORS.night,
-    theme_color: COLORS.night,
+    background_color: COLORS.jungleDeep,
+    theme_color: COLORS.jungleDeep,
     orientation: "portrait",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
