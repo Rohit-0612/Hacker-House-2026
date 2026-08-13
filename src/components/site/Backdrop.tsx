@@ -16,13 +16,16 @@ export function Backdrop() {
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       {/* Anchored to the foot of the viewport and held to a share of its width,
           so they frame the page rather than crowding the wordmark. */}
+      {/* Sized by *width* on phones. Height-driven sizing made each palm about
+          424px wide against a 390px viewport, so the two overlapped across the
+          middle and read as one tangled thicket. */}
       <Palms
         side="left"
-        className="absolute -left-[12vw] bottom-0 h-[88%] w-auto max-w-none opacity-55 sm:-left-[6vw]"
+        className="absolute bottom-0 -left-[7vw] w-[38vw] max-w-none opacity-40 sm:-left-[6vw] sm:h-[88%] sm:w-auto sm:opacity-55"
       />
       <Palms
         side="right"
-        className="absolute -right-[12vw] bottom-0 h-[88%] w-auto max-w-none opacity-55 sm:-right-[6vw]"
+        className="absolute bottom-0 -right-[7vw] w-[38vw] max-w-none opacity-40 sm:-right-[6vw] sm:h-[88%] sm:w-auto sm:opacity-55"
       />
 
       {/* Depth: a warm glow behind the fold, and a darkening toward the foot so
