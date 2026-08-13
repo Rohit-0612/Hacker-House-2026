@@ -120,13 +120,20 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
 
     try {
       const result = await publish();
+
       if (!result) {
-        // Deliberately no download here: a file appearing unannounced is what
-        // made this look broken. Say what happened and let them choose.
+        // No link means no preview card, so the image has to travel as a file.
+        // Announced, not silent — the notice is set before the composer opens
+        // and is still there when they come back.
+        downloadBlob(artwork.main.blob, filename);
         setNotice(
-          "We couldn't publish a link, so the post has no preview. Download the pass and attach it.",
+          "Couldn't publish a share link, so your pass was downloaded instead — attach it to the post.",
         );
+        // A same-tab navigation cancels a download that hasn't started yet, and
+        // on this path the composer opens in this tab. Let it get going first.
+        await new Promise((resolve) => setTimeout(resolve, 700));
       }
+
       if (navigate) navigate(xIntentUrl(artwork.format, result?.shareUrl));
       else openXComposer(artwork.format, result?.shareUrl);
     } finally {

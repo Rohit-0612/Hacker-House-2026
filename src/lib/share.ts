@@ -25,47 +25,20 @@ export function isTouchDevice(): boolean {
 }
 
 /**
- * Opens the X composer, preferring the installed app over the browser.
+ * Opens the X composer as a top-level navigation.
  *
- * Two things stop `https://x.com/intent/post` from reaching the app on a phone:
- * `target="_blank"` opts out of Universal Link / App Link handling entirely,
- * and even a top-level navigation only hands off if X's own link manifest
- * claims the `/intent/` path. The `twitter://` scheme goes straight to the app,
- * so it is tried first and the web intent is the fallback.
+ * Always the `https://x.com/intent/post` URL, never the `twitter://` scheme.
+ * The scheme does open the app, but the app ignores its parameters, so the
+ * composer comes up blank — worse than the browser. Handing the app the real
+ * intent URL through Universal Link / App Link means it receives the caption
+ * and the pass link with it.
  *
- * The fallback is guarded by page visibility: if the app took over, this tab is
- * hidden and we must *not* also navigate it, or the user comes back to a stray
- * x.com page behind the app.
+ * What matters for the hand-off is that this is a *top-level* navigation:
+ * `target="_blank"` opts out of app-link handling entirely, which is why this
+ * used to always land in the browser.
  */
 export function openXComposer(format: Format, shareUrl?: string | null): void {
-  const webUrl = xIntentUrl(format, shareUrl);
-
-  if (!isTouchDevice()) {
-    window.location.href = webUrl;
-    return;
-  }
-
-  const message = shareUrl ? `${captionFor(format)}\n${shareUrl}` : captionFor(format);
-  let settled = false;
-
-  const goWeb = () => {
-    if (settled || document.hidden) return;
-    settled = true;
-    window.location.href = webUrl;
-  };
-
-  const onHide = () => {
-    if (document.hidden) settled = true;
-  };
-  document.addEventListener("visibilitychange", onHide, { once: true });
-
-  // If the scheme is unhandled the page just sits there, so time out to the web.
-  setTimeout(() => {
-    document.removeEventListener("visibilitychange", onHide);
-    goWeb();
-  }, 1200);
-
-  window.location.href = `twitter://post?message=${encodeURIComponent(message)}`;
+  window.location.href = xIntentUrl(format, shareUrl);
 }
 
 /** Web Share API Level 2 — the only path that attaches the real PNG to the X app. */
