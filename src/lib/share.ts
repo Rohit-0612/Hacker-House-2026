@@ -53,16 +53,34 @@ export function canShareFiles(files: File[]): boolean {
   }
 }
 
-export async function shareFile(file: File, format: Format): Promise<boolean> {
+/**
+ * Hands the OS share sheet the real PNG plus arbitrary text.
+ *
+ * This is the only way an image reaches an X post from a phone: the intent URL
+ * carries text and a link and nothing else. Picking X from the sheet opens its
+ * composer with the file already attached.
+ *
+ * Returns true when the sheet handled it — including a user cancel, which is a
+ * decision, not a failure to route around.
+ */
+export async function sharePayload(file: File, text: string): Promise<boolean> {
   if (!canShareFiles([file])) return false;
   try {
-    await navigator.share({ files: [file], text: captionFor(format) });
+    await navigator.share({ files: [file], text });
     return true;
   } catch (err) {
-    // AbortError = user dismissed the sheet; not a failure worth surfacing.
     if (err instanceof DOMException && err.name === "AbortError") return true;
     return false;
   }
+}
+
+export async function shareFile(
+  file: File,
+  format: Format,
+  shareUrl?: string | null,
+): Promise<boolean> {
+  const text = shareUrl ? `${captionFor(format)}\n${shareUrl}` : captionFor(format);
+  return sharePayload(file, text);
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

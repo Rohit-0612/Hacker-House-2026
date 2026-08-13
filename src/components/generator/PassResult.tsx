@@ -121,13 +121,17 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
     try {
       const result = await publish();
 
-      if (!result) {
-        // No link means no preview card, so the image has to travel as a file.
-        // Announced, not silent — the notice is set before the composer opens
-        // and is still there when they come back.
+      // On a phone the pass is put on the device every time, not just when
+      // publishing fails: the intent URL can carry text and a link but never a
+      // file, so attaching the image by hand is the only way it reaches the
+      // post from here. (`Share pass` is the route that hands X the file
+      // directly, via the OS sheet.)
+      if (!result || touch) {
         downloadBlob(artwork.main.blob, filename);
         setNotice(
-          "Couldn't publish a share link, so your pass was downloaded instead — attach it to the post.",
+          result
+            ? "Your pass was downloaded — attach it to the post."
+            : "Couldn't publish a share link, so your pass was downloaded instead — attach it to the post.",
         );
         // A same-tab navigation cancels a download that hasn't started yet, and
         // on this path the composer opens in this tab. Let it get going first.
@@ -145,7 +149,7 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
   const sharePass = async () => {
     const file = new File([artwork.main.blob], filename, { type: "image/png" });
     setBusy("share");
-    await shareFile(file, artwork.format);
+    await shareFile(file, artwork.format, published?.shareUrl);
     setBusy(null);
   };
 
@@ -234,22 +238,16 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
           </Button>
         )}
 
-        {shareHref ? (
+        {/* The anchor exists only to dodge the desktop popup blocker, so it is
+            desktop-only. On a phone the click has to run through shareOnX —
+            that is where the share sheet and the download live, and an anchor
+            navigating straight to X skips both. */}
+        {shareHref && !touch ? (
           <ButtonLink
             variant="outline"
             href={shareHref}
-            // A new tab opts out of app-link handling, so on a phone this stays
-            // a top-level navigation and hands off to the X app instead.
-            target={touch ? undefined : "_blank"}
+            target="_blank"
             rel="noopener noreferrer"
-            onClick={
-              touch
-                ? (e) => {
-                    e.preventDefault();
-                    openXComposer(artwork.format, published?.shareUrl);
-                  }
-                : undefined
-            }
             className={cn("w-full", !canShare && "sm:col-start-2 sm:row-start-1")}
           >
             <XLogo />
