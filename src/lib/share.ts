@@ -18,6 +18,56 @@ export function xIntentUrl(format: Format, shareUrl?: string | null): string {
   return `https://x.com/intent/post?${params.toString()}`;
 }
 
+/** True when this looks like a phone or tablet — where an X app may be installed. */
+export function isTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
+/**
+ * Opens the X composer, preferring the installed app over the browser.
+ *
+ * Two things stop `https://x.com/intent/post` from reaching the app on a phone:
+ * `target="_blank"` opts out of Universal Link / App Link handling entirely,
+ * and even a top-level navigation only hands off if X's own link manifest
+ * claims the `/intent/` path. The `twitter://` scheme goes straight to the app,
+ * so it is tried first and the web intent is the fallback.
+ *
+ * The fallback is guarded by page visibility: if the app took over, this tab is
+ * hidden and we must *not* also navigate it, or the user comes back to a stray
+ * x.com page behind the app.
+ */
+export function openXComposer(format: Format, shareUrl?: string | null): void {
+  const webUrl = xIntentUrl(format, shareUrl);
+
+  if (!isTouchDevice()) {
+    window.location.href = webUrl;
+    return;
+  }
+
+  const message = shareUrl ? `${captionFor(format)}\n${shareUrl}` : captionFor(format);
+  let settled = false;
+
+  const goWeb = () => {
+    if (settled || document.hidden) return;
+    settled = true;
+    window.location.href = webUrl;
+  };
+
+  const onHide = () => {
+    if (document.hidden) settled = true;
+  };
+  document.addEventListener("visibilitychange", onHide, { once: true });
+
+  // If the scheme is unhandled the page just sits there, so time out to the web.
+  setTimeout(() => {
+    document.removeEventListener("visibilitychange", onHide);
+    goWeb();
+  }, 1200);
+
+  window.location.href = `twitter://post?message=${encodeURIComponent(message)}`;
+}
+
 /** Web Share API Level 2 — the only path that attaches the real PNG to the X app. */
 export function canShareFiles(files: File[]): boolean {
   if (typeof navigator === "undefined") return false;

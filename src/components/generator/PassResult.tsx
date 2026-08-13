@@ -12,6 +12,8 @@ import {
   claimTab,
   downloadBlob,
   filenameFor,
+  isTouchDevice,
+  openXComposer,
   shareFile,
   withTimeout,
   xIntentUrl,
@@ -41,6 +43,14 @@ function canShareSnapshot(): boolean {
   return shareCapability;
 }
 
+/** Same server-safe read as above, for the pointer type. */
+let touchCapability: boolean | null = null;
+
+function isTouchSnapshot(): boolean {
+  touchCapability ??= isTouchDevice();
+  return touchCapability;
+}
+
 interface Props {
   artwork: Artwork;
   fields: PassFields;
@@ -56,6 +66,7 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
   const [published, setPublished] = useState<UploadResult | null>(null);
   const [zoom, setZoom] = useState(false);
   const canShare = useSyncExternalStore(subscribeNever, canShareSnapshot, () => false);
+  const touch = useSyncExternalStore(subscribeNever, isTouchSnapshot, () => false);
 
   const upload = useMemo(() => onceUploader(artwork, fields), [artwork, fields]);
   const filename = filenameFor(artwork.format, fields.name);
@@ -102,20 +113,22 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
   const shareOnX = async () => {
     setBusy("x");
     setNotice(null);
-    const navigate = claimTab();
+
+    // On a phone the composer is opened in this tab (see openXComposer), so
+    // claiming a second one would strand a blank page behind the X app.
+    const navigate = touch ? null : claimTab();
 
     try {
       const result = await publish();
-      if (result) {
-        navigate(xIntentUrl(artwork.format, result.shareUrl));
-      } else {
+      if (!result) {
         // Deliberately no download here: a file appearing unannounced is what
         // made this look broken. Say what happened and let them choose.
-        navigate(xIntentUrl(artwork.format));
         setNotice(
           "We couldn't publish a link, so the post has no preview. Download the pass and attach it.",
         );
       }
+      if (navigate) navigate(xIntentUrl(artwork.format, result?.shareUrl));
+      else openXComposer(artwork.format, result?.shareUrl);
     } finally {
       setBusy(null);
     }
@@ -218,8 +231,18 @@ export function PassResult({ artwork, fields, onRestart }: Props) {
           <ButtonLink
             variant="outline"
             href={shareHref}
-            target="_blank"
+            // A new tab opts out of app-link handling, so on a phone this stays
+            // a top-level navigation and hands off to the X app instead.
+            target={touch ? undefined : "_blank"}
             rel="noopener noreferrer"
+            onClick={
+              touch
+                ? (e) => {
+                    e.preventDefault();
+                    openXComposer(artwork.format, published?.shareUrl);
+                  }
+                : undefined
+            }
             className={cn("w-full", !canShare && "sm:col-start-2 sm:row-start-1")}
           >
             <XLogo />
