@@ -255,7 +255,7 @@ export function Generator() {
                         hint="Passenger"
                         value={fields.name}
                         onChange={(v) => setFields((f) => ({ ...f, name: v }))}
-                        placeholder="Prince Kumar"
+                        placeholder="Your full name"
                         maxLength={24}
                         error={fieldErrors.name}
                         disabled={busy}
@@ -266,7 +266,7 @@ export function Generator() {
                         hint="Coach"
                         value={fields.team}
                         onChange={(v) => setFields((f) => ({ ...f, team: v }))}
-                        placeholder="AbhayRandHai"
+                        placeholder="Your team, or solo"
                         maxLength={24}
                         error={fieldErrors.team}
                         disabled={busy}
@@ -276,7 +276,7 @@ export function Generator() {
                         hint="Class"
                         value={fields.role}
                         onChange={(v) => setFields((f) => ({ ...f, role: v }))}
-                        placeholder="Full stack"
+                        placeholder="What you build"
                         maxLength={26}
                         error={fieldErrors.role}
                         disabled={busy}
@@ -286,7 +286,7 @@ export function Generator() {
                         hint="From"
                         value={fields.city}
                         onChange={(v) => setFields((f) => ({ ...f, city: v }))}
-                        placeholder="Bengaluru"
+                        placeholder="City you're travelling from"
                         maxLength={20}
                         error={fieldErrors.city}
                         disabled={busy}
